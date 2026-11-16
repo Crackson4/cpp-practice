@@ -41,14 +41,7 @@ char RandomChar()
 
 class GeneticPopulation
 {
-    std::string password;
-
-public:
-    Population *population;
-    const Chromosome *found_password;
-
-    int generation_num = 0;
-    bool password_found = false;
+    const std::string password;
 
     std::size_t chromosome_length;
     std::size_t population_size;
@@ -57,16 +50,21 @@ public:
     std::size_t random_num;
     std::size_t selection_size = elite_num + random_num;
 
-    GeneticPopulation(std::string password, int population_size, float mutation_rate, float elite_percentage, float random_percentage);
-
     Chromosome *GenerateChromosome();
     float EvaluateChromosome(const Chromosome &chromosome);
     Population *SelectChromosomes();
     Chromosome *Crossover(const Chromosome &parent1, const Chromosome &parent2);
     void MutateChromosome(Chromosome &chromosome);
     Population *NextGeneration();
-    void Evolve();
 
+public:
+    Population *population;
+
+    int generation_num = 0;
+    bool password_found = false;
+
+    GeneticPopulation(std::string password, int population_size, float mutation_rate, float elite_percentage, float random_percentage);
+    void Evolve();
     void PrintPopulation(int width, int height);
 };
 
@@ -103,10 +101,7 @@ float GeneticPopulation::EvaluateChromosome(const Chromosome &chromosome)
 
     // Check if the password is found
     if (score == 1.0)
-    {
         this->password_found = true;
-        this->found_password = &chromosome;
-    }
 
     return score;
 }
@@ -156,7 +151,7 @@ Population *GeneticPopulation::SelectChromosomes()
 Chromosome *GeneticPopulation::Crossover(const Chromosome &parent1, const Chromosome &parent2)
 {
     // Combine the chromosomes using one-point crossover
-    int index = this->chromosome_length / 2;
+    int index = RandRange(this->chromosome_length);
 
     std::string part_1 = std::string(parent1.begin(), parent1.begin() + index);
     std::string part_2 = std::string(parent2.begin() + index, parent2.end());
@@ -209,12 +204,21 @@ void GeneticPopulation::PrintPopulation(int width = 10, int height = 10)
     for (int j = 0; j < height; j++)
     {
         for (int k = 0; k < width; k++)
-            std::cout << this->population->at(width * j + k) << ' ';
+        {
+            Chromosome *chromosome = &this->population->at(width * j + k);
+
+            // If a chromosome matches the password, print it in green
+            if (*chromosome == this->password)
+                std::cout << "\e[32m";
+
+            std::cout << this->population->at(width * j + k) << "\e[0m ";
+        }
         std::cout << '\n';
     }
 }
 
-void PrintWelcome() {
+void PrintWelcome()
+{
     std::cout << "##################################\n";
     std::cout << "#        Password Cracker        #\n";
     std::cout << "##################################\n";
@@ -222,7 +226,8 @@ void PrintWelcome() {
     std::cout << "You first enter a password, then the algorithm will attempt to guess it.\n";
     std::cout << "The only information it has access to is how close its guesses are.\n";
     std::cout << "You can see the first 100 guesses in a generation; once the password is found, the algorithm will stop.\n";
-    std::cout << "Watch closely, because it doesn't take long!\n" << std::endl;
+    std::cout << "Watch closely, because it doesn't take long!\n"
+              << std::endl;
 }
 
 int main()
@@ -233,18 +238,18 @@ int main()
     std::string password;
     std::cout << "Enter your password: ";
     std::cin >> password;
-    std::cout << "\x1b[s"; // Save cursor position
+    std::cout << "\n\x1b[s"; // Save cursor position
 
     GeneticPopulation *gp = new GeneticPopulation(password);
 
     while (!gp->password_found)
     {
-        gp->PrintPopulation(); // Print the current generation
-        gp->Evolve();          // Evolve the population
+        gp->Evolve();                                                // Evolve the population
+        gp->PrintPopulation();                                       // Print the current generation
         std::this_thread::sleep_for(std::chrono::milliseconds(200)); // Delay for display purposes
     }
 
-    std::cout << "\nPassword found! The password is: " << *gp->found_password << std::endl;
+    std::cout << "\nPassword found in " << gp->generation_num << " generations!" << std::endl;
 
     delete gp;
 
